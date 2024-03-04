@@ -1,0 +1,64 @@
+version: '3.7'
+
+x-deploy: &default-deploy
+  restart_policy:
+    condition: unless-stopped
+    delay: 5s
+#    max_attempts: 3
+    window: 120s
+  update_config:
+    order: start-first
+
+networks:
+  firezone-network:
+    enable_ipv6: true
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+        - subnet: fcff:3990:3990::/64
+          gateway: fcff:3990:3990::1
+
+services:
+  firezone:
+    image: firezone/firezone:${VERSION:-latest}
+    ports:
+      - ${WIREGUARD_PORT:-51820}:${WIREGUARD_PORT:-51820}/udp
+      - 13000:13000
+    env_file:
+      - ${FZ_INSTALL_DIR:-.}/.env
+    volumes:
+      - ${FZ_INSTALL_DIR:-.}/firezone:/var/firezone
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+    depends_on:
+      - postgres
+    networks:
+      firezone-network:
+        ipv4_address: 172.25.0.100
+        ipv6_address: fcff:3990:3990::99
+    deploy:
+      <<: *default-deploy
+
+  postgres:
+    image: postgres:15
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-firezone}
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?err}
+    networks:
+      - firezone-network
+    deploy:
+      <<: *default-deploy
+      update_config:
+        order: stop-first
+
+volumes:
+  postgres-data:

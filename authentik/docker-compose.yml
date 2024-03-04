@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  ## AUTHENTIK SERVER
+  postgresql:
+    container_name: authentik_postgresql
+    image: docker.io/library/postgres:12-alpine
+    restart: unless-stopped
+    healthcheck:
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - ./authentik-database:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: supersecret
+      POSTGRES_USER: supersecret
+      POSTGRES_DB: supersecret
+  
+  redis:
+    container_name: authentik_redis
+    image: docker.io/library/redis:alpine
+    command: --save 60 1 --loglevel warning
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+    volumes:
+      - ./authentik-redis:/data
+
+  server:
+    container_name: authentik_server
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2023.5.2}
+    restart: unless-stopped
+    command: server
+    environment:
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__USER: supersecret
+      AUTHENTIK_POSTGRESQL__NAME: supersecret
+      AUTHENTIK_POSTGRESQL__PASSWORD: supersecret
+      AUTHENTIK_SECRET_KEY: supersecret
+    volumes:
+      - ./authentik-media:/media
+      - ./authentik-custom-templates:/templates
+    ports:
+      - "${COMPOSE_PORT_HTTP:-9000}:9000"
+      - "${COMPOSE_PORT_HTTPS:-9443}:9443"
+    depends_on:
+      - postgresql
+      - redis
+
+  worker:
+    container_name: authentik_worker
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2023.5.2}
+    restart: unless-stopped
+    command: worker
+    environment:
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__USER: supersecret 
+      AUTHENTIK_POSTGRESQL__NAME: supersecret
+      AUTHENTIK_POSTGRESQL__PASSWORD: supersecret
+      AUTHENTIK_SECRET_KEY: supersecret
+    user: root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./authentik-media:/media
+      - ./authentik-certs:/certs
+      - ./authentik-custom-templates:/templates
+    depends_on:
+      - postgresql
+      - redis

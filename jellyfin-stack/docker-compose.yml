@@ -1,0 +1,50 @@
+---
+services:
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - JELLYFIN_PublishedServerUrl=https://jellyfin.whonix.net #optional
+    volumes:
+      - ./config:/config
+      - /Media/TV Shows:/data/tvshows
+      - /Media/Movies:/data/movies
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+      - /dev/dri/card0:/dev/dri/card0
+    ports:
+      - 8096:8096
+      - 8920:8920 #optional
+      - 7359:7359/udp #optional
+      - 1900:1900/udp #optional
+    restart: unless-stopped
+
+  jellyseerr: 
+    image: fallenbagel/jellyseerr:latest 
+    container_name: jellyseerr 
+    hostname: jellyseerr 
+    networks: 
+      - mediarr 
+    user: 1000:1000 
+    volumes:
+      - ./overseer/config:/config
+    ports:
+      - 5055:5055
+    restart: unless-stopped
+
+  jfago:
+    image: 'hrfee/jfa-go:latest'
+    container_name: JF-GO
+    restart: unless-stopped
+    ports:
+      - '8056:8056'
+    # - '8057:8057' used for tls
+    volumes:
+      - ./jf-go/config/jfa-go:/data
+      - ./config:/jf
+      - /etc/localtime:/etc/localtime:ro
+
+

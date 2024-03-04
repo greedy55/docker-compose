@@ -1,0 +1,41 @@
+version: "2.1"
+services:
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /mnt/media:/config
+      - /mnt/media/complete:/downloads #optional
+      - /mnt/media/incomplete:/incomplete-downloads #optional
+    ports:
+      - 8080:8080
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /mnt/sonarr/config:/config
+      - /mnt/media/complete:/downloads #optional
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /mnt/radarr/config:/config
+      - /mnt/media/complete:/downloads #optional
+    ports:
+      - 7878:7878
+    restart: unless-stopped

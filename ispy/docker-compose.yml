@@ -1,0 +1,19 @@
+---
+version: "3.9"
+services:
+  ispyagentdvr:
+    image: mekayelanik/ispyagentdvr:latest
+    container_name: ispy-agent-dvr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Adelaide
+    volumes:
+      - ./ipsy:/AgentDVR/Media/XML
+      - /mnt/Storage:/AgentDVR/Media/WebServerRoot/Media
+      - ./ispy:/AgentDVR/Commands
+    ports:
+      - 8090:8090
+      - 3478:3478/udp
+      - 50000-50010:50000-50010/udp
+    restart: unless-stopped
